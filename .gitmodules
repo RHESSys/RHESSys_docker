@@ -1,0 +1,3 @@
+[submodule "RHESSys"]
+	path = RHESSys
+	url = https://github.com/RHESSys/RHESSys.git

@@ -39,23 +39,28 @@ Building the Docker image
 -------------------------
 
 To build the Docker image:
+
     docker build .
 
 If you run into problems building the image (e.g. missing Ubuntu packages):
+
     docker pull ubuntu
     
 then do:
+
     docker build --no-cache .
 
 Once the image is built, you should see something like:
 > Successfully built 538cf9bf982c
 
 Make a tag for this image (so you won't have to remember the hash):
+
     docker tag 538cf9bf982c rhessys
     
 Running RHESSys within Docker
 -----------------------------
 
 To run the Docker image:
+
     docker run -v /tmp/RHESSys_docker:/src -v /tmp/MYRESOURCE:/data -e SRC_VOLUME=/src -e DATA_VOLUME=/data -e UUID=1345f6b3a46e -e RID=MYRESOURCE123 -e RHESSYS_PROJECT=DR5_3m_nonburned_DEM_rain_duration_DEM_float_lctest -e RHESSYS_PARAMS="-st 2001 1 1 1 -ed 2001 1 2 1 -b -t tecfiles/tec_daily.txt -w worldfiles/world_init -r flow/world_init_res_conn_subsurface.flow flow/world_init_res_conn_surface.flow -s 1.43092108352 3.81468111311 3.04983096856 -sv 2.35626069137 49.1712407611 -gw 0.00353233818322 0.495935816914" -e RHESSYS_USE_SRC_FROM_DATA=True -e RESULTS_URL=http://127.0.0.1:8080 rhessys
     

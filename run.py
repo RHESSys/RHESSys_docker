@@ -96,7 +96,8 @@ def main():
         r = requests.post(response_url, files=files)
         
     except Exception as e:
-        r = requests.post(abort_url, error_text=e)
+        r = requests.post(abort_url, data={"error_text" : e})
+        print e
     
 if __name__ == "__main__":
     main()

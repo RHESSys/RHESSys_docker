@@ -3,35 +3,62 @@
 '''
 To run:
 
-SRC_VOLUME=/tmp DATA_VOLUME=/tmp UUID=1345f6b3a46e RID=MYRESOURCE123 RHESSYS_PROJECT=DR5_3m_nonburned_DEM_rain_duration_DEM_float_lctest RHESSYS_PARAMS="-st 2001 1 1 1 -ed 2001 1 2 1 -b -t tecfiles/tec_daily.txt -w worldfiles/world_init -r flow/world_init_res_conn_subsurface.flow flow/world_init_res_conn_surface.flow -s 1.43092108352 3.81468111311 3.04983096856 -sv 2.35626069137 49.1712407611 -gw 0.00353233818322 0.495935816914" RHESSYS_USE_SRC_FROM_DATA=True RESPONSE_URL=http://127.0.0.1:8080 ABORT_URL=http://127.0.0.1:8080 ./run.py
+SRC_VOLUME=/tmp UUID=1345f6b3a46e RID=MYRESOURCE123 RHESSYS_PROJECT=DR5_3m_nonburned_DEM_rain_duration_DEM_float_lctest RHESSYS_PARAMS="-st 2001 1 1 1 -ed 2001 1 2 1 -b -t tecfiles/tec_daily.txt -w worldfiles/world_init -r flow/world_init_res_conn_subsurface.flow flow/world_init_res_conn_surface.flow -s 1.43092108352 3.81468111311 3.04983096856 -sv 2.35626069137 49.1712407611 -gw 0.00353233818322 0.495935816914" RHESSYS_USE_SRC_FROM_DATA=True INPUT_URL=http://127.0.0.1:8081 RESPONSE_URL=http://127.0.0.1:8080 ABORT_URL=http://127.0.0.1:8080 ./run.py
 '''
 
 import os
 import sys
 from subprocess import *
 import re
+import tempfile
+import shutil
+import zipfile
 
 import requests
 
 
 MAKE_PATH = '/usr/bin/make'
+BUFFER_SIZE = 10240
 
 def main():
-    # Read environment
-    src_vol = os.environ['SRC_VOLUME']
-    data_vol = os.environ['DATA_VOLUME']
-    rsrc_id = os.environ['RID']
-    run_id = os.environ['UUID']
-    response_url = os.environ['RESPONSE_URL']
-    abort_url = os.environ['ABORT_URL']
-    
     try:
+        # Read environment
+        src_vol = os.environ['SRC_VOLUME']
+        rsrc_id = os.environ['RID']
+        run_id = os.environ['UUID']
+        input_url = os.environ['INPUT_URL']
+        response_url = os.environ['RESPONSE_URL']
+        abort_url = os.environ['ABORT_URL']
+        rhessys_project = os.environ['RHESSYS_PROJECT']
+        rhessys_params = os.environ['RHESSYS_PARAMS']
+        
+        # Create temporary directory for storing model data in
+        tmp_dir = tempfile.mkdtemp()
+        data_dir = os.path.join(tmp_dir, rsrc_id, 'contents')
+        os.makedirs(data_dir)
+        tmp_zip = os.path.join(data_dir, 'input.zip')
+        
+        # Download input data to temporary directory
+        r = requests.get(input_url, stream=True)
+        with open(tmp_zip, 'wb') as fd:
+            for chunk in r.iter_content(BUFFER_SIZE):
+                fd.write(chunk)
+        
+        zip = zipfile.ZipFile(tmp_zip, 'r')
+        # Check to make sure that RHESSYS_PROJECT exits in the zipfile before extracting
+        zlist = zip.namelist()
+        top_level = zlist[0].strip(os.path.sep)
+        if top_level != rhessys_project:
+            raise Exception("Expected resource zip file to contain RHESSYS_PROJECT named {0} but found {1} at the top level of the zip file instead".format(rhessys_project, top_level))
+        # Unzip input data
+        zip.extractall(data_dir)
+        
+        # Determine which RHESSys source to use, from SRC_VOLUME or from the
+        # downloaded resource
         if os.environ.has_key('RHESSYS_USE_SRC_FROM_DATA'):
             use_src_from_data_vol = bool(os.environ['RHESSYS_USE_SRC_FROM_DATA'])
         else:
             use_src_from_data_vol = False
-        rhessys_project = os.environ['RHESSYS_PROJECT']
-        rhessys_params = os.environ['RHESSYS_PARAMS']
         # Make sure RHESSys params doesn't already contain an output prefix option, 
         # if so strip it
         rhessys_params = re.sub('-pre\s+\S+\s*', '', rhessys_params)
@@ -39,7 +66,7 @@ def main():
         # Build RHESSys from src
         if use_src_from_data_vol:
             # Use RHESSys src from data volume
-            build_dir = os.path.join(data_vol, rsrc_id, 'contents', 
+            build_dir = os.path.join(data_dir, 
                                      rhessys_project, 'rhessys', 'src', 'rhessys')
         else:
             # Use RHESSys src from src volume (i.e. Docker container)
@@ -72,7 +99,7 @@ def main():
             raise Exception("RHESSys binary {0} is not executable".format(rhessys_bin))
     
         # Run RHESSys
-        rhessys_dir = os.path.join(data_vol, rsrc_id, 'contents', 
+        rhessys_dir = os.path.join(data_dir, 
                                    rhessys_project, 'rhessys')
         # Make output directory
         rhessys_out = os.path.join(rhessys_dir, 'output', run_id)
@@ -96,8 +123,11 @@ def main():
         r = requests.post(response_url, files=files)
         
     except Exception as e:
+        # POST error to ABORT_URL
         r = requests.post(abort_url, data={"error_text" : e})
-        print e
+    finally:
+        # Clean up
+        shutil.rmtree(tmp_dir)
     
 if __name__ == "__main__":
     main()

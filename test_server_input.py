@@ -32,7 +32,7 @@ while True:
 conn.send('HTTP/1.1 200 OK\r\n')
 conn.send('Date: Wed, 24 Sep 2014 01:55:00 GMT\r\n')
 conn.send('Content-Type: application/octet-stream\r\n')
-conn.send('Content-Disposition: inline; filename="{0}"'.format(file_name))
+conn.send('Content-Disposition: inline; filename="{0}"\r\n'.format(file_name))
 conn.send("Content-Length: {0}\r\n".format(content_length))
 conn.send('\r\n')
 fd = open(file, 'rb')

@@ -129,6 +129,8 @@ def main():
         # POST error to ABORT_URL
         if abort_url:
             r = requests.post(abort_url, data={"error_text" : e})
+        else:
+            raise e
     finally:
         # Clean up
         shutil.rmtree(tmp_dir)

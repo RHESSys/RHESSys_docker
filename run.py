@@ -22,18 +22,21 @@ BUFFER_SIZE = 10240
 
 def main():
     try:
+        # Define variables referenced in exception and finally blocks
+        # Create temporary directory for storing model data in
+        tmp_dir = tempfile.mkdtemp()
+        abort_url = None
+        
         # Read environment
+        abort_url = os.environ['ABORT_URL']
         src_vol = os.environ['SRC_VOLUME']
         rsrc_id = os.environ['RID']
         run_id = os.environ['UUID']
         input_url = os.environ['INPUT_URL']
         response_url = os.environ['RESPONSE_URL']
-        abort_url = os.environ['ABORT_URL']
         rhessys_project = os.environ['RHESSYS_PROJECT']
         rhessys_params = os.environ['RHESSYS_PARAMS']
         
-        # Create temporary directory for storing model data in
-        tmp_dir = tempfile.mkdtemp()
         data_dir = os.path.join(tmp_dir, rsrc_id, 'contents')
         os.makedirs(data_dir)
         tmp_zip = os.path.join(data_dir, 'input.zip')
@@ -124,7 +127,8 @@ def main():
         
     except Exception as e:
         # POST error to ABORT_URL
-        r = requests.post(abort_url, data={"error_text" : e})
+        if abort_url:
+            r = requests.post(abort_url, data={"error_text" : e})
     finally:
         # Clean up
         shutil.rmtree(tmp_dir)

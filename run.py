@@ -37,7 +37,7 @@ def main():
         rhessys_project = os.environ['RHESSYS_PROJECT']
         rhessys_params = os.environ['RHESSYS_PARAMS']
         
-        data_dir = os.path.join(tmp_dir, rsrc_id, 'contents')
+        bag_dir = os.path.join(tmp_dir, rsrc_id, 'bag')
         os.makedirs(data_dir)
         tmp_zip = os.path.join(data_dir, 'input.zip')
         
@@ -47,8 +47,17 @@ def main():
             for chunk in r.iter_content(BUFFER_SIZE):
                 fd.write(chunk)
         
-        zip = zipfile.ZipFile(tmp_zip, 'r')
+        # Unpack the bag
+        bag_zip = zipfile.ZipFile(tmp_zip, 'r')
+        bag_list = bag_zip.namelist()
+        bag_top_level = bag_list[0].strip(os.path.sep)
+        bag_zip.extractall(bag_dir)
+
         # Check to make sure that RHESSYS_PROJECT exits in the zipfile before extracting
+        data_dir = os.path.join(bag_dir, bag_top_level, 'data', 'contents')
+        zip_name = rhessys_project + os.extsep + 'zip'
+        zip_path = os.path.join(data_dir, zip_name)
+        zip.ZipFile(zip_path, 'r')
         zlist = zip.namelist()
         top_level = zlist[0].strip(os.path.sep)
         if top_level != rhessys_project:

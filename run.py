@@ -38,8 +38,8 @@ def main():
         rhessys_params = os.environ['RHESSYS_PARAMS']
         
         bag_dir = os.path.join(tmp_dir, rsrc_id, 'bag')
-        os.makedirs(data_dir)
-        tmp_zip = os.path.join(data_dir, 'input.zip')
+        os.makedirs(bag_dir)
+        tmp_zip = os.path.join(bag_dir, 'input.zip')
         
         # Download input data to temporary directory
         r = requests.get(input_url, stream=True)

@@ -57,7 +57,7 @@ def main():
         data_dir = os.path.join(bag_dir, bag_top_level, 'data', 'contents')
         zip_name = rhessys_project + os.extsep + 'zip'
         zip_path = os.path.join(data_dir, zip_name)
-        zip.ZipFile(zip_path, 'r')
+        zipfile.ZipFile(zip_path, 'r')
         zlist = zip.namelist()
         top_level = zlist[0].strip(os.path.sep)
         if top_level != rhessys_project:

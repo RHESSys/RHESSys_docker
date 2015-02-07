@@ -13,6 +13,8 @@ import re
 import tempfile
 import shutil
 import zipfile
+import StringIO
+import traceback
 
 import requests
 
@@ -137,7 +139,13 @@ def main():
     except Exception as e:
         # POST error to ABORT_URL
         if abort_url:
-            r = requests.post(abort_url, data={"error_text" : e})
+            error_text = StringIO.StringIO()
+            error_text.write(e)
+            error_text.write('\n')
+            error_text.write(traceback.format_exc())
+            error = error_text.getvalue()
+            print error
+            r = requests.post(abort_url, data={"error_text" : error})
         else:
             raise e
     finally:

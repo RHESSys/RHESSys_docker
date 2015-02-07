@@ -5,6 +5,7 @@
 '''
 
 import socket
+import urllib
  
 
 TCP_IP = '127.0.0.1'
@@ -20,7 +21,7 @@ print 'Connection from:', addr
 while True:
     data = conn.recv(BUFFER_SIZE)
     if not data: break
-    print data
+    print urllib.unquote_plus(data)
     lines = data.split('\r\n')
     if lines[-1] == '':
         break

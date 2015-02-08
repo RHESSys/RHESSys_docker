@@ -25,6 +25,7 @@ BUFFER_SIZE = 10240
 def print_dir(outfile, dirname, names):
     outfile.write("Directory: {0}\n".format(dirname))
     for entry in names:
+        outfile.write('\t')
         outfile.write(entry)
         outfile.write('\n')
 

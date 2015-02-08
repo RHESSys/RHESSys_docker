@@ -46,6 +46,8 @@ def main():
         rhessys_project = os.environ['RHESSYS_PROJECT']
         rhessys_params = os.environ['RHESSYS_PARAMS']
         
+        debug = os.getenv('DEBUG', False)
+        
         bag_dir = os.path.join(tmp_dir, rsrc_id, 'bag')
         os.makedirs(bag_dir)
         tmp_zip = os.path.join(bag_dir, 'input.zip')
@@ -150,8 +152,9 @@ def main():
             error_text.write(e)
             error_text.write('\n')
             error_text.write(traceback.format_exc())
-            error_text.write('\nVolume root contents:\n')
-            os.path.walk('/', print_dir, error_text)
+            if debug:
+                error_text.write('\nVolume root contents:\n')
+                os.path.walk('/Users/miles/Desktop', print_dir, error_text)
             
             error = error_text.getvalue()
             r = requests.post(abort_url, data={"error_text" : error})

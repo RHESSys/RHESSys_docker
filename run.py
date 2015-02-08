@@ -22,6 +22,12 @@ import requests
 MAKE_PATH = '/usr/bin/make'
 BUFFER_SIZE = 10240
 
+def print_dir(outfile, dirname, names):
+    outfile.write("Directory: {0}\n".format(dirname))
+    for entry in names:
+        outfile.write(entry)
+        outfile.write('\n')
+
 def main():
     try:
         # Define variables referenced in exception and finally blocks
@@ -143,8 +149,10 @@ def main():
             error_text.write(e)
             error_text.write('\n')
             error_text.write(traceback.format_exc())
+            error_text.write('\nVolume root contents:\n')
+            os.path.walk('/', print_dir, error_text)
+            
             error = error_text.getvalue()
-            print error
             r = requests.post(abort_url, data={"error_text" : error})
         else:
             raise e

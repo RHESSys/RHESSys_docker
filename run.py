@@ -15,6 +15,8 @@ import shutil
 import zipfile
 import StringIO
 import traceback
+import json
+import time
 
 import requests
 
@@ -30,6 +32,7 @@ def print_dir(outfile, dirname, names):
         outfile.write('\n')
 
 def main():
+    debug = os.getenv('DEBUG', False)
     try:
         # Define variables referenced in exception and finally blocks
         # Create temporary directory for storing model data in
@@ -45,8 +48,10 @@ def main():
         response_url = os.environ['RESPONSE_URL']
         rhessys_project = os.environ['RHESSYS_PROJECT']
         rhessys_params = os.environ['RHESSYS_PARAMS']
-        
-        debug = os.getenv('DEBUG', False)
+        if os.environ.has_key('MODEL_OPTIONS'):
+            model_options = json.loads(os.environ['MODEL_OPTIONS'])
+        else:
+            model_options = {}
         
         bag_dir = os.path.join(tmp_dir, rsrc_id, 'bag')
         os.makedirs(bag_dir)
@@ -124,6 +129,23 @@ def main():
         # Run RHESSys
         rhessys_dir = os.path.join(data_dir, 
                                    rhessys_project, 'rhessys')
+        
+        # Write TEC file if requested in MODEL_OPTIONS
+        if model_options.has_key('TEC_FILE'):
+            # Make sure RHESSys params doesn't already contain a tec file option, 
+            # if so strip it
+            rhessys_params = re.sub('-t\s+\S+\s*', '', rhessys_params)
+            tec_file = str(time.time())
+            tec_file_path_rel = os.path.join('tecfiles', tec_file)
+            tec_file_path = os.path.join(rhessys_dir, tec_file_path_rel)
+            tec_fp = open(tec_file_path, 'w')
+            lines = model_options['TEC_FILE'].split('\\n')
+            for line in lines:
+                tec_fp.write(line)
+                tec_fp.write('\n')
+            tec_fp.close()
+            rhessys_params = "{0} -t {1}".format(rhessys_params, tec_file_path_rel)
+            
         # Make output directory
         rhessys_out = os.path.join(rhessys_dir, 'output', run_id)
         if os.path.exists(rhessys_out):
@@ -163,7 +185,7 @@ def main():
     finally:
         # Clean up
         shutil.rmtree(tmp_dir)
-    
+            
 if __name__ == "__main__":
     main()
     

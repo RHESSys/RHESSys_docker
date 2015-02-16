@@ -32,6 +32,7 @@ def print_dir(outfile, dirname, names):
         outfile.write('\n')
 
 def main():
+    timestamp = str(time.time())
     debug = os.getenv('DEBUG', False)
     try:
         # Define variables referenced in exception and finally blocks
@@ -130,12 +131,21 @@ def main():
         rhessys_dir = os.path.join(data_dir, 
                                    rhessys_project, 'rhessys')
         
+        # Make sure worldfile exists
+        m = re.search('-w\s+(\S+)\s*', rhessys_params)
+        if not m:
+            raise Exception("No worldfile defined in RHESSys parameters: {0}".format(rhessys_params))
+        worldfile_path_rel = m.group(1)
+        worldfile_path = os.path.join(rhessys_dir, worldfile_path_rel)
+        if not os.access(worldfile_path, os.R_OK):
+            raise Exception("RHESSys worldfile {0} not found in model package".format(worldfile_path_rel))        
+        
         # Write TEC file if requested in MODEL_OPTIONS
         if model_options.has_key('TEC_FILE'):
             # Make sure RHESSys params doesn't already contain a tec file option, 
             # if so strip it
             rhessys_params = re.sub('-t\s+\S+\s*', '', rhessys_params)
-            tec_file = str(time.time())
+            tec_file = timestamp
             tec_file_path_rel = os.path.join('tecfiles', tec_file)
             tec_file_path = os.path.join(rhessys_dir, tec_file_path_rel)
             tec_fp = open(tec_file_path, 'w')
@@ -145,6 +155,52 @@ def main():
                 tec_fp.write('\n')
             tec_fp.close()
             rhessys_params = "{0} -t {1}".format(rhessys_params, tec_file_path_rel)
+            
+        # Use specific climate station if request in MODEL_OPTIONS
+        if model_options.has_key('CLIMATE_STATION'):
+            # Make sure climate station exists
+            clim_station = "{0}.base".format(model_options['CLIMATE_STATION'])
+            clim_station_path_rel = os.path.join('clim', clim_station)
+            clim_station_path = os.path.join(rhessys_dir, clim_station_path_rel)
+            if not os.access(clim_station_path, os.R_OK):
+                raise Exception("Unable to read climate station {0}".format(clim_station_path_rel))
+            
+            # Look for explicit worldfile header
+            input_whdr_path_rel = None
+            input_whdr_path = None
+            m = re.search('-whdr\s+(\S+)\s*', rhessys_params)
+            if m:
+                input_whdr_path_rel = m.group(1)
+                input_whdr_path = os.path.join(rhessys_dir,input_whdr_path_rel)
+                # Remove header
+                rhessys_params = re.sub('-whdr\s+\S+\s*', '', rhessys_params)
+            else:
+                # Assume implicit worldfile header (we don't support old-style worldfiles
+                # with embedded headers)
+                input_whdr_path_rel = "{0}.hdr".format(worldfile_path_rel)
+                input_whdr_path = "{0}.hdr".format(worldfile_path) 
+            if not os.access(input_whdr_path, os.R_OK):
+                raise Exception("Unable to read worldfile header {0}".format(input_whdr_path_rel))
+            
+            # Create new single-use worldfile header based on input header, changing the
+            # climate station
+            hdr_file = timestamp
+            hdr_file_path_rel = os.path.join('worldfiles', hdr_file)
+            hdr_file_path = os.path.join(rhessys_dir, hdr_file_path_rel)
+            hdr_out_fp = open(hdr_file_path, 'w')
+            base_station_filename_re = re.compile('^(\S+)\s+base_station_filename$')
+            with open(input_whdr_path, 'r') as fp:
+                for line in fp:
+                    if base_station_filename_re.match(line):
+                        hdr_out_fp.write("{0}\tbase_station_filename\n".format(clim_station_path_rel))
+                        # Only replace first climate station found
+                        break
+                    else:
+                        hdr_out_fp.write(line.strip() + '\n')
+            hdr_out_fp.close()
+            
+            # Add single-use header to model command line parameters
+            rhessys_params = "{0} -whdr {1}".format(rhessys_params, hdr_file_path_rel)
             
         # Make output directory
         rhessys_out = os.path.join(rhessys_dir, 'output', run_id)

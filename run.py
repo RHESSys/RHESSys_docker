@@ -19,10 +19,12 @@ import json
 import time
 
 import requests
+from requests.exceptions import ConnectionError
 
 
 MAKE_PATH = '/usr/bin/make'
 BUFFER_SIZE = 10240
+MAX_RETRIES = 15
 
 def print_dir(outfile, dirname, names):
     outfile.write("Directory: {0}\n".format(dirname))
@@ -59,7 +61,19 @@ def main():
         tmp_zip = os.path.join(bag_dir, 'input.zip')
         
         # Download input data to temporary directory
-        r = requests.get(input_url, stream=True)
+        retries = 0
+        connected = False
+        while not connected:
+            try:
+                r = requests.get(input_url, stream=True)
+                connected = True
+            except ConnectionError as e:
+                if retries > MAX_RETRIES:
+                    raise e
+                else:
+                    retries += 1
+                    time.sleep(13)
+                    
         with open(tmp_zip, 'wb') as fd:
             for chunk in r.iter_content(BUFFER_SIZE):
                 fd.write(chunk)

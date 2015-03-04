@@ -246,7 +246,7 @@ def main():
             error_text.write(traceback.format_exc())
             if debug:
                 error_text.write('\nVolume root contents:\n')
-                os.path.walk('/Users/miles/Desktop', print_dir, error_text)
+                os.path.walk('/', print_dir, error_text)
             
             error = error_text.getvalue()
             r = requests.post(abort_url, data={"error_text" : error})

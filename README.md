@@ -18,6 +18,7 @@ been cloned
 of the resource
 - RESPONSE_URL: The HydroShare resource URL where results should be posted to
 - ABORT_URL: The HydroShare resource URL where error messages should be posted to
+- MODEL_OPTIONS: JSON dictionary of options specifying how to run the model
 - RHESSYS_PROJECT: The name of the RHESSysWorkflows project directory
 - RHESSYS_PARAMS: The command line parameters used to run RHESSys
 
